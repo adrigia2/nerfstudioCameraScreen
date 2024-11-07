@@ -38,12 +38,13 @@ from nerfstudio.models.splatfacto import SplatfactoModel
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils.decorators import check_main_thread, decorate_all
 from nerfstudio.utils.writer import GLOBAL_BUFFER, EventName
+from nerfstudio.viewer.capture_images_panel import CaptureImagesPanel
 from nerfstudio.viewer.control_panel import ControlPanel
 from nerfstudio.viewer.export_panel import populate_export_tab
 from nerfstudio.viewer.render_panel import populate_render_tab
 from nerfstudio.viewer.render_state_machine import RenderAction, RenderStateMachine
 from nerfstudio.viewer.utils import CameraState, parse_object
-from nerfstudio.viewer.viewer_elements import ViewerControl, ViewerElement
+from nerfstudio.viewer.viewer_elements import ViewerCheckbox, ViewerControl, ViewerElement, ViewerNumber
 from nerfstudio.viewer_legacy.server import viewer_utils
 
 if TYPE_CHECKING:
@@ -190,12 +191,19 @@ class Viewer:
         self.show_images = self.viser_server.gui.add_button(
             label="Show Train Cams", disabled=False, icon=viser.Icon.EYE, color=None
         )
+        
         self.show_images.on_click(lambda _: self.set_camera_visibility(True))
         self.show_images.on_click(lambda _: self.toggle_cameravis_button())
         self.show_images.visible = False
         mkdown = self.make_stats_markdown(0, "0x0px")
         self.stats_markdown = self.viser_server.gui.add_markdown(mkdown)
         tabs = self.viser_server.gui.add_tab_group()
+        
+        test_tab = tabs.add_tab("Test", viser.Icon.ATOM)
+        with test_tab:
+            self.capture_images_panel = CaptureImagesPanel(
+                self.viser_server)
+
         control_tab = tabs.add_tab("Control", viser.Icon.SETTINGS)
         with control_tab:
             self.control_panel = ControlPanel(
