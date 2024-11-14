@@ -203,6 +203,7 @@ class Viewer:
         with test_tab:
             self.capture_images_panel = CaptureImagesPanel(
                 self.viser_server)
+                
 
         control_tab = tabs.add_tab("Control", viser.Icon.SETTINGS)
         with control_tab:
@@ -361,6 +362,9 @@ class Viewer:
         self.render_statemachines[client.client_id] = RenderStateMachine(self, VISER_NERFSTUDIO_SCALE_RATIO, client)
         self.render_statemachines[client.client_id].start()
 
+        self.capture_images_panel.set_render_state_machine(self.render_statemachines[client.client_id])
+        self.capture_images_panel.set_client(client)
+
         @client.camera.on_update
         def _(_: viser.CameraHandle) -> None:
             if not self.ready:
@@ -370,6 +374,9 @@ class Viewer:
                 camera_state = self.get_camera_state(client)
                 self.render_statemachines[client.client_id].action(RenderAction("move", camera_state))
 
+                
+
+    
     def set_camera_visibility(self, visible: bool) -> None:
         """Toggle the visibility of the training cameras."""
         with self.viser_server.atomic():

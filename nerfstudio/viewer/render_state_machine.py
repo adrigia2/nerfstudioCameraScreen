@@ -203,6 +203,10 @@ class RenderStateMachine(threading.Thread):
             writer.put_time(
                 name=EventName.VIS_RAYS_PER_SEC, duration=num_rays / render_time, step=step, avg_over_steps=True
             )
+        
+        # show rgb image with the file explorer
+        
+
         return outputs
 
     def run(self):
