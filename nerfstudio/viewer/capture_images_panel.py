@@ -50,6 +50,8 @@ class CaptureImagesPanel:
         print("Button clicked!")
         for camera in self.cameras:
             print(f"Rendering image for camera at position {camera.c2w[:, 3].T}")
+
+            self.render_state_machine.state = "high"
             image=self.render_state_machine._render_img(camera)["rgb"].cpu().numpy()
             # save image as png
             image_array = image  # È già in formato numpy grazie a .cpu().numpy()
@@ -69,21 +71,30 @@ class CaptureImagesPanel:
         """Creates a CameraState for a given position."""
         # Default translation for the camera to be placed 1 unit away from the origin
         translation = {
-            'front': torch.tensor([[0, 0, 1]]).T,
-            'back': torch.tensor([[0, 0, -1]]).T,
-            'up': torch.tensor([[0, 1, 0]]).T,
-            'down': torch.tensor([[0, -1, 0]]).T
+            'front': torch.tensor([[0, 0, 1]]).transpose(0, 1),
+            'back': torch.tensor([[0, 0, -1]]).transpose(0, 1),
+            'up': torch.tensor([[0, 1, 0]]).transpose(0, 1),
+            'down': torch.tensor([[0, -1, 0]]).transpose(0, 1),
         }[position]
 
         # Define rotation matrices
         if position == "front":
-            rotation = torch.eye(3)
+            # 1 0 0
+            # 0 1 0
+            # 0 0 1
+            rotation = torch.eye(3)   
         elif position == "back":
-            rotation = torch.diag(torch.tensor([-1, -1, 1]))  # Flip x and y axes
+            # rotate 180 degrees around y axis
+            # -1 0 0
+            # 0 1 0
+            # 0 0 -1
+            rotation = torch.tensor([[-1, 0, 0], [0, 1, 0], [0, 0, -1]])
         elif position == "up":
+            # rotate 90 degrees around x axis
+            # 1 0 0
+            # 0 0 1
+            # 0 -1 0
             rotation = torch.tensor([[1, 0, 0], [0, 0, 1], [0, -1, 0]])
-        elif position == "down":
-            rotation = torch.tensor([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
         else:
             raise ValueError(f"Invalid position: {position}")
 
@@ -98,12 +109,14 @@ class CaptureImagesPanel:
                 if camera_type == "Fisheye"
                 else CameraType.EQUIRECTANGULAR
                 if camera_type == "Equirectangular"
-                else CameraType.PERSPECTIVE)
+                else CameraType.PERSPECTIVE,
+
+                )
 
 
     def generate_multiple_camera_states(self) -> List[CameraState]:
         # Example usage
-        fov = 90.0  # Field of view in degrees
+        fov = 70.0  # Field of view in degrees
         aspect = 16/9  # Aspect ratio
         camera_type = CameraType.PERSPECTIVE
 
@@ -111,9 +124,8 @@ class CaptureImagesPanel:
         front_camera = self.create_camera_state(fov, aspect, "front", camera_type)
         back_camera = self.create_camera_state(fov, aspect, "back", camera_type)
         up_camera = self.create_camera_state(fov, aspect, "up", camera_type)
-        down_camera = self.create_camera_state(fov, aspect, "down", camera_type)
 
-        return [front_camera, back_camera, up_camera, down_camera]
+        return [front_camera, back_camera, up_camera]
 
 
     
