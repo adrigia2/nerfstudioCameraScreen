@@ -24,9 +24,6 @@ from typing import TYPE_CHECKING, Dict, List, Literal, Optional
 
 import numpy as np
 import torch
-import viser
-import viser.theme
-import viser.transforms as vtf
 from typing_extensions import assert_never
 
 from nerfstudio.cameras.camera_optimizers import CameraOptimizer
@@ -46,7 +43,13 @@ from nerfstudio.viewer.render_state_machine import RenderAction, RenderStateMach
 from nerfstudio.viewer.utils import CameraState, parse_object
 from nerfstudio.viewer.viewer_elements import ViewerCheckbox, ViewerControl, ViewerElement, ViewerNumber
 from nerfstudio.viewer_legacy.server import viewer_utils
+from PIL import Image
 
+
+from nerfstudio.viewer.renderer_manager import RendererManager
+import viser
+import viser.theme
+import viser.transforms as vtf
 if TYPE_CHECKING:
     from nerfstudio.engine.trainer import Trainer
 
@@ -162,6 +165,11 @@ class Viewer:
             brand_color=(255, 211, 105),
         )
 
+        self.server_render_state_machine = RenderStateMachine(self, VISER_NERFSTUDIO_SCALE_RATIO, None)
+
+        self.server_renderer= RendererManager(self.server_render_state_machine)
+        
+
         self.render_statemachines: Dict[int, RenderStateMachine] = {}
         self.viser_server.on_client_disconnect(self.handle_disconnect)
         self.viser_server.on_client_connect(self.handle_new_client)
@@ -203,6 +211,10 @@ class Viewer:
         with test_tab:
             self.capture_images_panel = CaptureImagesPanel(
                 self.viser_server)
+            
+        # call this method each 10 seconds
+        self.render_and_update_after(10)
+        # periodically render the scene
                 
 
         control_tab = tabs.add_tab("Control", viser.Icon.SETTINGS)
@@ -573,3 +585,22 @@ class Viewer:
     def training_complete(self) -> None:
         """Called when training is complete."""
         self.training_state = "completed"
+
+    def render_and_update_after_(self, time: int):
+        self.render_and_save_locally()
+        threading.Timer(time, self.render_and_update_after_, time).start()  # Schedule the next call
+    
+    def render_and_update_after(self, time: int):
+        threading.Timer(time, self.render_and_update_after_, time).start()
+
+
+    def render_and_save_locally(self):
+        cameras = self.server_renderer.generate_multiple_camera_states()
+
+        for camera in cameras:
+            print(f"Rendering image for camera at position {camera.c2w[:, 3].T}")
+            image_array = self.server_renderer.render_image(camera)
+            image_pil = Image.fromarray((image_array * 255).astype(np.uint8))  # Scala a [0, 255] se l'array è in [0, 1]
+            
+            image_pil.save("../saved_images/" + str(camera.idx) + ".png")
+            # save the image as png
