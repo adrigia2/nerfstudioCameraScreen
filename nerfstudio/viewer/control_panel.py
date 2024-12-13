@@ -145,7 +145,7 @@ class ControlPanel:
         )
         self._crop_viewport = ViewerCheckbox(
             "Enable ",
-            False,
+            True,
             cb_hook=lambda han: [self.update_control_panel(), rerender_cb()],
             hint="Crop the scene to a specified box",
         )
@@ -159,7 +159,7 @@ class ControlPanel:
 
         self._crop_center = ViewerVec3(
             "Crop center",
-            (0.0, 0.0, 0.0),
+            (0.0, 0.0, -0.5),
             step=0.01,
             cb_hook=lambda e: [rerender_cb(), update_center(e)],
             hint="Center of the crop box",
@@ -177,7 +177,7 @@ class ControlPanel:
         )
 
         self._crop_scale = ViewerVec3(
-            "Crop scale", (1.0, 1.0, 1.0), step=0.01, cb_hook=lambda _: rerender_cb(), hint="Size of the crop box."
+            "Crop scale", (0.5, 0.5, 0.5), step=0.01, cb_hook=lambda _: rerender_cb(), hint="Size of the crop box."
         )
 
         @self._crop_handle.on_update
