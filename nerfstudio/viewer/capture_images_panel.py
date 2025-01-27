@@ -217,7 +217,7 @@ class CaptureImagesPanel:
 
     def generate_multiple_camera_states(self) -> List[CameraState]:
         # Example usage
-        fov = 39.61  # Field of view in degrees
+        fov =  0.6911111611634243  # Field of view in radians
         aspect = 1  # Aspect ratio
         camera_type = CameraType.PERSPECTIVE
 
