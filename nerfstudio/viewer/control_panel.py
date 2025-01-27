@@ -159,7 +159,7 @@ class ControlPanel:
 
         self._crop_center = ViewerVec3(
             "Crop center",
-            (0.0, 0.0, -0.5),
+            (0.0, 0.0, 0.0),
             step=0.01,
             cb_hook=lambda e: [rerender_cb(), update_center(e)],
             hint="Center of the crop box",

@@ -44,6 +44,8 @@ class CameraState:
     """The rendering time of the camera state."""
     idx: int = 0
     """The index of the current camera."""
+    name: str = ""
+    """The name of the camera state."""
 
 
 def get_camera(
