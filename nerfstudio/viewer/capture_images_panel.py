@@ -11,6 +11,7 @@ from nerfstudio.viewer.render_state_machine import RenderStateMachine
 from nerfstudio.viewer.utils import CameraState
 from nerfstudio.viewer.viewer_elements import ViewerButton, ViewerCheckbox, ViewerDropdown, ViewerNumber, ViewerSlider, ViewerText, ViewerVec3
 from scipy.spatial.transform import Rotation
+from websockets.sync.client import connect
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,6 +56,7 @@ class CaptureImagesPanel:
     def set_client(self, client: viser.ClientHandle) -> None:
         self.client = client
 
+
     def handle_btn(self) -> None:
         print("Button clicked!")
         for camera in self.cameras:
@@ -70,10 +72,25 @@ class CaptureImagesPanel:
             image_pil = Image.fromarray((image_array * 255).astype(np.uint8))  # Sa a [0, 255] se l'array è in [0, 1]
             image_pil.save(file_name)
 
+            
+
             #read the output.png file and send it to the client
             with open(file_name, "rb") as f:
+                dictionary={'Top': 'top_camera.png', 'Right Top': 'right_top.png', 'Back Right Top': 'back_right_top.png', 'Back Top': 'back_top.png', 'Back Left Top': 'back_left_top.png', 'Left Top': 'left_top.png', 'Front Left Top': 'front_left_top.png', 'Front Top': 'front_top.png', 'Front Right Top': 'front_right_top.png', 'Right': 'right.png', 'Back Right': 'back_right.png', 'Back': 'back.png', 'Back Left': 'back_left.png', 'Left': 'left.png', 'Front Left': 'front_left.png', 'Front': 'front.png', 'Front Right': 'front_right.png'}
                 image_bytes = f.read()
-                self.client.send_file_download(file_name, image_bytes)
+                #self.client.send_file_download(file_name, image_bytes)
+
+                def hello():
+                    with connect("ws://localhost:8765") as websocket:
+                        websocket.send(dictionary[camera.name])
+                        websocket.send(image_bytes)
+                        print("Sent image: ", file_name)
+                        message = websocket.recv()
+                        print(f"Received: {message}")
+
+                hello() 
+
+            
 
             print("camera_matrix:", camera.c2w)
             print("position:", camera.fov)
