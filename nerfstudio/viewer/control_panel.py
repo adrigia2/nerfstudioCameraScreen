@@ -150,7 +150,7 @@ class ControlPanel:
             hint="Crop the scene to a specified box",
         )
         self._background_color = ViewerRGB(
-            "Background color", (38, 42, 55), cb_hook=lambda _: rerender_cb(), hint="Color of the background"
+            "Background color", (150, 150, 150), cb_hook=lambda _: rerender_cb(), hint="Color of the background"
         )
         self._crop_handle = self.server.scene.add_transform_controls("Crop", depth_test=False, line_width=4.0)
 

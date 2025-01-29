@@ -84,6 +84,7 @@ class Viewer:
         train_lock: Optional[threading.Lock] = None,
         share: bool = False,
     ):
+        self.capture_images_panel = None
         self.ready = False  # Set to True at end of constructor.
         self.config = config
         self.trainer = trainer
@@ -202,7 +203,7 @@ class Viewer:
         test_tab = tabs.add_tab("Test", viser.Icon.ATOM)
         with test_tab:
             self.capture_images_panel = CaptureImagesPanel(
-                self.viser_server)
+                self.viser_server, self)
                 
 
         control_tab = tabs.add_tab("Control", viser.Icon.SETTINGS)
@@ -512,6 +513,9 @@ class Viewer:
             num_rays_per_batch: number of rays per batch, used during training
         """
         self.step = step
+
+        if self.capture_images_panel is not None:
+            self.capture_images_panel.set_step(step)
 
         if len(self.render_statemachines) == 0:
             return

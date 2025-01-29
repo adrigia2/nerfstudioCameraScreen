@@ -21,10 +21,17 @@ class CaptureImagesPanel:
     def __init__(
             self,
             server : ViserServer,
+            viewer
     ):
         self.server = server
+        self.viewer = viewer
+        self.step = 0
+        self.file_socket = connect("ws://localhost:8765")
+        self.websocket = connect("ws://localhost:8766")  # Crea connessione persistente
 
         self.a = ViewerButton(name="My Button", cb_hook= lambda han: self.handle_btn())
+        self.h = ViewerButton(name="Toggle training", cb_hook= lambda han: self.toggle_training_btn())
+
         self.b = ViewerNumber(name="Number", default_value=1.0)
         self.c = ViewerCheckbox(name="Checkbox", default_value=False)
         self.d = ViewerDropdown(name="Dropdown", default_value="A", options=["A", "B"])
@@ -34,6 +41,7 @@ class CaptureImagesPanel:
 
         with self.server.gui.add_folder("TestOptions"):
             self.a.install(self.server)
+            self.h.install(self.server)
             self.b.install(self.server)
             self.c.install(self.server)
             self.d.install(self.server)
@@ -49,12 +57,31 @@ class CaptureImagesPanel:
             "Top":    torch.tensor([0.0,  0.0,  1.0], dtype=torch.float32),
         }
         self.cameras = self.generate_multiple_camera_states()
+    def toggle_training_btn(self) -> None:
+        self.viewer.toggle_pause_button()
+        self.viewer._toggle_training_state(None)
+
 
     def set_render_state_machine(self, render_state_machine: RenderStateMachine) -> None:
         self.render_state_machine = render_state_machine
 
     def set_client(self, client: viser.ClientHandle) -> None:
         self.client = client
+
+    def set_step(self, step: int) -> None:
+        self.step = step
+
+        if(self.step % 20 == 0):
+            print(f"Step: {step}")
+            with connect("ws://localhost:8766") as websocket:
+                websocket.send(f"step {step}")
+
+
+        if(self.step > 3400):
+            self.viewer.toggle_pause_button()
+            self.viewer._toggle_training_state(None)
+
+            self.handle_btn()
 
 
     def handle_btn(self) -> None:
@@ -67,30 +94,20 @@ class CaptureImagesPanel:
             # save image as png
             image_array = image  # È già in formato numpy grazie a .cpu().numpy()
 
-            file_name = f"output_{camera.name}.png"
+            dictionary={'Top': 'top_camera.png', 'Right Top': 'right_top.png', 'Back Right Top': 'back_right_top.png', 'Back Top': 'back_top.png', 'Back Left Top': 'back_left_top.png', 'Left Top': 'left_top.png', 'Front Left Top': 'front_left_top.png', 'Front Top': 'front_top.png', 'Front Right Top': 'front_right_top.png', 'Right': 'right.png', 'Back Right': 'back_right.png', 'Back': 'back.png', 'Back Left': 'back_left.png', 'Left': 'left.png', 'Front Left': 'front_left.png', 'Front': 'front.png', 'Front Right': 'front_right.png'}
+
+            file_name = f"output_{dictionary[camera.name]}"
             # Converti l'array numpy in un'immagine PIL
             image_pil = Image.fromarray((image_array * 255).astype(np.uint8))  # Sa a [0, 255] se l'array è in [0, 1]
             image_pil.save(file_name)
 
-            
+            def hello():
+                with connect("ws://localhost:8765") as websocket:
+                    websocket.send(dictionary[camera.name])
+                    message = websocket.recv()
+                    print(f"Received: {message}")
 
-            #read the output.png file and send it to the client
-            with open(file_name, "rb") as f:
-                dictionary={'Top': 'top_camera.png', 'Right Top': 'right_top.png', 'Back Right Top': 'back_right_top.png', 'Back Top': 'back_top.png', 'Back Left Top': 'back_left_top.png', 'Left Top': 'left_top.png', 'Front Left Top': 'front_left_top.png', 'Front Top': 'front_top.png', 'Front Right Top': 'front_right_top.png', 'Right': 'right.png', 'Back Right': 'back_right.png', 'Back': 'back.png', 'Back Left': 'back_left.png', 'Left': 'left.png', 'Front Left': 'front_left.png', 'Front': 'front.png', 'Front Right': 'front_right.png'}
-                image_bytes = f.read()
-                #self.client.send_file_download(file_name, image_bytes)
-
-                def hello():
-                    with connect("ws://localhost:8765") as websocket:
-                        websocket.send(dictionary[camera.name])
-                        websocket.send(image_bytes)
-                        print("Sent image: ", file_name)
-                        message = websocket.recv()
-                        print(f"Received: {message}")
-
-                hello() 
-
-            
+            hello() 
 
             print("camera_matrix:", camera.c2w)
             print("position:", camera.fov)
