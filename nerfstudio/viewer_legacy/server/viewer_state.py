@@ -39,8 +39,13 @@ from nerfstudio.utils.writer import GLOBAL_BUFFER, EventName
 from nerfstudio.viewer_legacy.server import viewer_utils
 from nerfstudio.viewer_legacy.server.control_panel import ControlPanel
 from nerfstudio.viewer_legacy.server.gui_utils import parse_object
-from nerfstudio.viewer_legacy.server.render_state_machine import RenderAction, RenderStateMachine
-from nerfstudio.viewer_legacy.server.utils import get_intrinsics_matrix_and_camera_to_world_h
+from nerfstudio.viewer_legacy.server.render_state_machine import (
+    RenderAction,
+    RenderStateMachine,
+)
+from nerfstudio.viewer_legacy.server.utils import (
+    get_intrinsics_matrix_and_camera_to_world_h,
+)
 from nerfstudio.viewer_legacy.server.viewer_elements import ViewerControl, ViewerElement
 from nerfstudio.viewer_legacy.viser import ViserServer
 from nerfstudio.viewer_legacy.viser.messages import (
@@ -94,7 +99,9 @@ class ViewerLegacyState:
         self.datapath = datapath.parent if datapath.is_file() else datapath
 
         if self.config.websocket_port is None:
-            websocket_port = viewer_utils.get_free_port(default_port=self.config.websocket_port_default)
+            websocket_port = viewer_utils.get_free_port(
+                default_port=self.config.websocket_port_default
+            )
         else:
             websocket_port = self.config.websocket_port
         self.log_filename.parent.mkdir(exist_ok=True)
@@ -119,22 +126,36 @@ class ViewerLegacyState:
         self.train_btn_state: Literal["training", "paused", "completed"] = (
             "training" if self.trainer is None else self.trainer.training_state
         )
-        self._prev_train_state: Literal["training", "paused", "completed"] = self.train_btn_state
+        self._prev_train_state: Literal["training", "paused", "completed"] = (
+            self.train_btn_state
+        )
 
         self.camera_message = None
 
         self.viser_server = ViserServer(host=config.websocket_host, port=websocket_port)
 
-        self.viser_server.register_handler(TrainingStateMessage, self._handle_training_state_message)
-        self.viser_server.register_handler(SaveCheckpointMessage, self._handle_save_checkpoint)
+        self.viser_server.register_handler(
+            TrainingStateMessage, self._handle_training_state_message
+        )
+        self.viser_server.register_handler(
+            SaveCheckpointMessage, self._handle_save_checkpoint
+        )
         self.viser_server.register_handler(CameraMessage, self._handle_camera_update)
-        self.viser_server.register_handler(CameraPathOptionsRequest, self._handle_camera_path_option_request)
-        self.viser_server.register_handler(CameraPathPayloadMessage, self._handle_camera_path_payload)
-        self.viser_server.register_handler(CropParamsMessage, self._handle_crop_params_message)
+        self.viser_server.register_handler(
+            CameraPathOptionsRequest, self._handle_camera_path_option_request
+        )
+        self.viser_server.register_handler(
+            CameraPathPayloadMessage, self._handle_camera_path_payload
+        )
+        self.viser_server.register_handler(
+            CropParamsMessage, self._handle_crop_params_message
+        )
         self.viser_server.register_handler(ClickMessage, self._handle_click_message)
         if self.include_time:
             self.viser_server.use_time_conditioning()
-            self.viser_server.register_handler(TimeConditionMessage, self._handle_time_condition_message)
+            self.viser_server.register_handler(
+                TimeConditionMessage, self._handle_time_condition_message
+            )
 
         self.control_panel = ControlPanel(
             self.viser_server,
@@ -150,16 +171,23 @@ class ViewerLegacyState:
                 element.install(self.viser_server)
                 # also rewire the hook to rerender
                 prev_cb = element.cb_hook
-                element.cb_hook = lambda element: [prev_cb(element), self._interrupt_render(element)]
+                element.cb_hook = lambda element: [
+                    prev_cb(element),
+                    self._interrupt_render(element),
+                ]
             else:
                 with self.viser_server.gui_folder(folder_labels[0]):
                     nested_folder_install(folder_labels[1:], element)
 
         self.viewer_elements = []
         if self.trainer is not None:
-            self.viewer_elements.extend(parse_object(self.trainer, ViewerElement, "Trainer"))
+            self.viewer_elements.extend(
+                parse_object(self.trainer, ViewerElement, "Trainer")
+            )
         else:
-            self.viewer_elements.extend(parse_object(pipeline, ViewerElement, "Pipeline"))
+            self.viewer_elements.extend(
+                parse_object(pipeline, ViewerElement, "Pipeline")
+            )
         for param_path, element in self.viewer_elements:
             folder_labels = param_path.split("/")[:-1]
             nested_folder_install(folder_labels, element)
@@ -182,13 +210,18 @@ class ViewerLegacyState:
     def _output_type_change(self, _):
         self.output_type_changed = True
 
+    def training_end(self):
+        pass
+
     def _output_split_type_change(self, _):
         self.output_split_type_changed = True
 
     def _interrupt_render(self, _) -> None:
         """Interrupt current render."""
         if self.camera_message is not None:
-            self.render_statemachine.action(RenderAction("rerender", self.camera_message))
+            self.render_statemachine.action(
+                RenderAction("rerender", self.camera_message)
+            )
 
     def _crop_params_update(self, _) -> None:
         """Update crop parameters"""
@@ -205,7 +238,9 @@ class ViewerLegacyState:
             crop_center=tuple(crop_center.tolist()),  # type: ignore
         )
         if self.camera_message is not None:
-            self.render_statemachine.action(RenderAction("rerender", self.camera_message))
+            self.render_statemachine.action(
+                RenderAction("rerender", self.camera_message)
+            )
 
     def _handle_training_state_message(self, message: NerfstudioMessage) -> None:
         """Handle training state message from viewer."""
@@ -283,7 +318,9 @@ class ViewerLegacyState:
         return self.train_btn_state
 
     @training_state.setter
-    def training_state(self, training_state: Literal["training", "paused", "completed"]) -> None:
+    def training_state(
+        self, training_state: Literal["training", "paused", "completed"]
+    ) -> None:
         """Set training state flag."""
         if self.trainer is not None:
             self.trainer.training_state = training_state
@@ -295,8 +332,10 @@ class ViewerLegacyState:
         cam_msg: Optional[CameraMessage] = self.camera_message
         if cam_msg is None:
             return None
-        intrinsics_matrix, camera_to_world_h = get_intrinsics_matrix_and_camera_to_world_h(
-            cam_msg, image_height=image_height, image_width=image_width
+        intrinsics_matrix, camera_to_world_h = (
+            get_intrinsics_matrix_and_camera_to_world_h(
+                cam_msg, image_height=image_height, image_width=image_width
+            )
         )
 
         camera_to_world = camera_to_world_h[:3, :]
@@ -375,26 +414,36 @@ class ViewerLegacyState:
         for idx in image_indices[image_indices < len(train_dataset)].tolist():
             image = train_dataset[idx]["image"]
             bgr = image[..., [2, 1, 0]]
-            camera_json = train_dataset.cameras.to_json(camera_idx=idx, image=bgr, max_size=100)
+            camera_json = train_dataset.cameras.to_json(
+                camera_idx=idx, image=bgr, max_size=100
+            )
             self.viser_server.add_dataset_image(idx=f"{idx:06d}", json=camera_json)
 
         # draw the eval cameras and images
         if eval_dataset is not None:
-            image_indices = image_indices[image_indices >= len(train_dataset)] - len(train_dataset)
+            image_indices = image_indices[image_indices >= len(train_dataset)] - len(
+                train_dataset
+            )
             for idx in image_indices.tolist():
                 image = eval_dataset[idx]["image"]
                 bgr = image[..., [2, 1, 0]]
                 # color the eval image borders red
                 # TODO: color the threejs frustum instead of changing the image itself like we are doing here
-                t = int(min(image.shape[:2]) * 0.1)  # border thickness as 10% of min height or width resolution
+                t = int(
+                    min(image.shape[:2]) * 0.1
+                )  # border thickness as 10% of min height or width resolution
                 bc = torch.tensor((0, 0, 1.0))
                 bgr[:t, :, :] = bc
                 bgr[-t:, :, :] = bc
                 bgr[:, -t:, :] = bc
                 bgr[:, :t, :] = bc
 
-                camera_json = eval_dataset.cameras.to_json(camera_idx=idx, image=bgr, max_size=100)
-                self.viser_server.add_dataset_image(idx=f"{idx+len(train_dataset):06d}", json=camera_json)
+                camera_json = eval_dataset.cameras.to_json(
+                    camera_idx=idx, image=bgr, max_size=100
+                )
+                self.viser_server.add_dataset_image(
+                    idx=f"{idx+len(train_dataset):06d}", json=camera_json
+                )
 
         # draw the scene box (i.e., the bounding box)
         self.viser_server.update_scene_box(train_dataset.scene_box)
@@ -424,7 +473,9 @@ class ViewerLegacyState:
                 EventName.TRAIN_RAYS_PER_SEC.value in GLOBAL_BUFFER["events"]
                 and EventName.VIS_RAYS_PER_SEC.value in GLOBAL_BUFFER["events"]
             ):
-                train_s = GLOBAL_BUFFER["events"][EventName.TRAIN_RAYS_PER_SEC.value]["avg"]
+                train_s = GLOBAL_BUFFER["events"][EventName.TRAIN_RAYS_PER_SEC.value][
+                    "avg"
+                ]
                 vis_s = GLOBAL_BUFFER["events"][EventName.VIS_RAYS_PER_SEC.value]["avg"]
                 train_util = self.control_panel.train_util
                 vis_n = self.control_panel.max_res**2
@@ -432,12 +483,16 @@ class ViewerLegacyState:
                 train_time = train_n / train_s
                 vis_time = vis_n / vis_s
 
-                render_freq = train_util * vis_time / (train_time - train_util * train_time)
+                render_freq = (
+                    train_util * vis_time / (train_time - train_util * train_time)
+                )
             else:
                 render_freq = 30
             if step > self.last_step + render_freq:
                 self.last_step = step
-                self.render_statemachine.action(RenderAction("step", self.camera_message))
+                self.render_statemachine.action(
+                    RenderAction("step", self.camera_message)
+                )
 
     def update_colormap_options(self, dimensions: int, dtype: type) -> None:
         """update the colormap options based on the current render

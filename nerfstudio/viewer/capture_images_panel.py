@@ -38,6 +38,9 @@ class SocketMessage:
 
 class CaptureImagesPanel:
 
+    def training_end(self) -> None:
+        self.output_rendering()
+
     def get_pipeline_websocket(self):
         try:
             if self.pipeline_websocket is None:
@@ -50,6 +53,7 @@ class CaptureImagesPanel:
         self.server = server
         self.viewer = viewer
         self.step = 0
+        self.render_state_machine = None
         self.prospective_file_dict = {
             "Top": "top_camera.png",
             "Right Top": "right_top.png",
@@ -112,10 +116,10 @@ class CaptureImagesPanel:
                 print(e)
                 pass
 
-        if self.step > 2000:
-            self.viewer.toggle_pause_button()
-            self.viewer._toggle_training_state(None)
-            self.output_rendering()
+        # if self.step > 2000:
+        # self.viewer.toggle_pause_button()
+        # self.viewer._toggle_training_state(None)
+        # self.output_rendering()
 
     def send_status_to_pipeline(self, camera_file_name: str) -> None:
         try:
@@ -127,6 +131,10 @@ class CaptureImagesPanel:
     def output_rendering(self) -> None:
         for camera in self.cameras:
             print(f"Rendering image for camera: {camera.name}")
+
+            if self.render_state_machine is None:
+                print("Render state machine is not set.")
+                return
 
             self.render_state_machine.state = "high"
             image = self.render_state_machine._render_img(camera)["rgb"].cpu().numpy()
